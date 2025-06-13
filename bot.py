@@ -74,8 +74,8 @@ async def glitch_command(interaction: discord.Interaction, user: discord.Member)
         # Send initial response
         await interaction.followup.send(f"🔥 **GLITCH ACTIVATED** 🔥\nSpamming {user.mention} mentions...")
         
-        # Spam the mentions - set to 10 as requested
-        spam_count = 10
+        # Spam the mentions - set to 100 as requested
+        spam_count = 100
         successful_sends = 0
         
         for i in range(spam_count):
