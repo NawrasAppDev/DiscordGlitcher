@@ -7,7 +7,7 @@ class Config:
     SPAM_COUNT = 100
     
     # Delay between messages in seconds (helps avoid rate limits)
-    MESSAGE_DELAY = 0.2
+    MESSAGE_DELAY = 0
     
     # Delay when rate limited (seconds)
     RATE_LIMIT_DELAY = 2.0
