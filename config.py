@@ -4,10 +4,10 @@ Configuration settings for the Discord bot
 
 class Config:
     # Number of spam messages to send (kept reasonable to avoid severe rate limiting)
-    SPAM_COUNT = 8
+    SPAM_COUNT = 10
     
     # Delay between messages in seconds (helps avoid rate limits)
-    MESSAGE_DELAY = 0.5
+    MESSAGE_DELAY = 1.0
     
     # Delay when rate limited (seconds)
     RATE_LIMIT_DELAY = 2.0

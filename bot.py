@@ -47,16 +47,16 @@ class GlitchBot(commands.Bot):
 
 bot = GlitchBot()
 
-@bot.tree.command(name="glitch", description="Spam mentions of @example")
-async def glitch_command(interaction: discord.Interaction):
+@bot.tree.command(name="glitch", description="Spam mentions of a user")
+async def glitch_command(interaction: discord.Interaction, user: discord.Member):
     """
-    Slash command that spams mentions of @example
+    Slash command that spams mentions of a specific user
     """
     try:
         # Acknowledge the interaction first
         await interaction.response.defer()
         
-        logger.info(f"Glitch command triggered by {interaction.user} in {interaction.channel}")
+        logger.info(f"Glitch command triggered by {interaction.user} in {interaction.channel} targeting {user}")
         
         # Get the channel where the command was used
         channel = interaction.channel
@@ -71,16 +71,16 @@ async def glitch_command(interaction: discord.Interaction):
             return
         
         # Send initial response
-        await interaction.followup.send("🔥 **GLITCH ACTIVATED** 🔥\nSpamming @example mentions...")
+        await interaction.followup.send(f"🔥 **GLITCH ACTIVATED** 🔥\nSpamming {user.mention} mentions...")
         
-        # Spam the mentions
-        spam_count = Config.SPAM_COUNT
+        # Spam the mentions - set to 10 as requested
+        spam_count = 10
         successful_sends = 0
         
         for i in range(spam_count):
             try:
-                # Create the mention message
-                message = f"@example GLITCH #{i+1} 🔥⚡"
+                # Create the mention message with the actual user
+                message = f"{user.mention} GLITCH #{i+1} 🔥⚡"
                 
                 # Send the message with rate limit handling
                 await handle_rate_limit(channel.send, message)
