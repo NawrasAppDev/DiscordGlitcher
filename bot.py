@@ -66,8 +66,9 @@ async def glitch_command(interaction: discord.Interaction, user: discord.Member)
             return
             
         # Check if bot has permission to send messages
-        if not channel.permissions_for(interaction.guild.me).send_messages:
-            await interaction.followup.send("❌ I don't have permission to send messages in this channel!", ephemeral=True)
+        bot_member = interaction.guild.me
+        if not bot_member or not channel.permissions_for(bot_member).send_messages:
+            await interaction.followup.send("❌ I don't have permission to send messages in this channel! Please give me 'Send Messages' permission.", ephemeral=True)
             return
         
         # Send initial response
