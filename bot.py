@@ -3,8 +3,12 @@ from discord.ext import commands
 import asyncio
 import logging
 import os
+from dotenv import load_dotenv
 from config import Config
 from utils import handle_rate_limit
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(
@@ -150,10 +154,10 @@ async def on_app_command_error(interaction: discord.Interaction, error: Exceptio
 
 async def main():
     """Main function to run the bot"""
-    token = os.getenv('DISCORD_TOKEN', 'your_discord_token_here')
+    token = os.getenv('DISCORD_TOKEN')
     
-    if token == 'your_discord_token_here':
-        logger.error("Discord token not found! Please set the DISCORD_TOKEN environment variable.")
+    if not token:
+        logger.error("Discord token not found! Please add DISCORD_TOKEN to your .env file.")
         return
     
     try:
