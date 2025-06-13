@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class GlitchBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
-        intents.message_content = True
+        # Remove privileged intents requirement
         super().__init__(command_prefix='!', intents=intents)
 
     async def setup_hook(self):
