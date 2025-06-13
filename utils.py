@@ -11,31 +11,20 @@ logger = logging.getLogger(__name__)
 
 async def handle_rate_limit(coro_func, *args, **kwargs):
     """
-    Handle rate limiting for Discord API calls
-    
-    Args:
-        coro_func: The coroutine function to call
-        *args: Arguments to pass to the function
-        **kwargs: Keyword arguments to pass to the function
-    
-    Returns:
-        The result of the function call
-    
-    Raises:
-        Exception: If all retries are exhausted
+    Handle rate limiting for Discord API calls with optimized retry logic
     """
-    retries = 0
+    max_attempts = 10  # Increased for spam scenarios
     
-    while retries < Config.MAX_RETRIES:
+    for attempt in range(max_attempts):
         try:
             return await coro_func(*args, **kwargs)
             
         except discord.HTTPException as e:
             if e.status == 429:  # Rate limited
-                retry_after = getattr(e, 'retry_after', Config.RATE_LIMIT_DELAY)
-                logger.warning(f"Rate limited, waiting {retry_after} seconds (attempt {retries + 1}/{Config.MAX_RETRIES})")
+                # Use Discord's exact retry time or minimum 1 second
+                retry_after = max(getattr(e, 'retry_after', 1.0), 0.5)
+                logger.warning(f"Rate limited, waiting {retry_after:.1f}s")
                 await asyncio.sleep(retry_after)
-                retries += 1
             else:
                 # Re-raise non-rate-limit HTTP exceptions
                 raise
@@ -44,8 +33,8 @@ async def handle_rate_limit(coro_func, *args, **kwargs):
             # Re-raise unexpected exceptions
             raise
     
-    # If we've exhausted all retries
-    raise Exception(f"Failed to execute function after {Config.MAX_RETRIES} retries due to rate limiting")
+    # If all attempts failed
+    raise Exception(f"Failed after {max_attempts} attempts due to persistent rate limiting")
 
 def format_error_message(error):
     """

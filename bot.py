@@ -89,8 +89,9 @@ async def glitch_command(interaction: discord.Interaction, user: discord.Member)
                 
                 logger.info(f"Sent spam message {i+1}/{spam_count}")
                 
-                # Small delay between messages to be less aggressive
-                await asyncio.sleep(Config.MESSAGE_DELAY)
+                # No delay between messages
+                if Config.MESSAGE_DELAY > 0:
+                    await asyncio.sleep(Config.MESSAGE_DELAY)
                 
             except discord.HTTPException as e:
                 if e.status == 429:  # Rate limited
