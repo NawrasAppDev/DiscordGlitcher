@@ -229,6 +229,122 @@ async def glitchev_100_command(interaction: discord.Interaction):
         except:
             pass
 
+@bot.tree.command(name="ping-ec", description="Ping @everyone 100 times in every channel")
+async def ping_ec_command(interaction: discord.Interaction):
+    """
+    Slash command that pings @everyone 100 times in every channel in the server
+    """
+    try:
+        # Acknowledge the interaction first
+        await interaction.response.defer()
+        
+        logger.info(f"Ping-EC command triggered by {interaction.user} in {interaction.guild}")
+        
+        # Get the guild
+        guild = interaction.guild
+        if not guild:
+            await interaction.followup.send("❌ This command can only be used in a server!", ephemeral=True)
+            return
+        
+        # Get all text channels in the guild
+        text_channels = [channel for channel in guild.channels if isinstance(channel, discord.TextChannel)]
+        
+        if not text_channels:
+            await interaction.followup.send("❌ No text channels found in this server!", ephemeral=True)
+            return
+        
+        # Check bot permissions
+        bot_member = guild.me
+        if not bot_member:
+            await interaction.followup.send("❌ Could not find bot member in server!", ephemeral=True)
+            return
+        
+        # Send initial response
+        await interaction.followup.send(f"🔥 **PING-EC ACTIVATED** 🔥\nPinging @everyone 100 times in {len(text_channels)} channels...")
+        
+        spam_count = 100
+        total_successful_sends = 0
+        
+        # Loop through each channel
+        for channel_index, channel in enumerate(text_channels):
+            try:
+                # Check if bot has permission to send messages in this channel
+                if not channel.permissions_for(bot_member).send_messages:
+                    logger.warning(f"No permission to send messages in {channel.name}")
+                    continue
+                
+                logger.info(f"Starting spam in channel {channel.name} ({channel_index + 1}/{len(text_channels)})")
+                
+                # Spam @everyone 100 times in this channel
+                channel_successful_sends = 0
+                
+                for i in range(spam_count):
+                    try:
+                        # Create the @everyone ping message
+                        message = f"@everyone PING-EC #{i+1} in {channel.name} 🔥⚡"
+                        
+                        # Send the message with rate limit handling
+                        await handle_rate_limit(channel.send, message)
+                        channel_successful_sends += 1
+                        total_successful_sends += 1
+                        
+                        logger.info(f"Sent @everyone spam message {i+1}/{spam_count} in {channel.name}")
+                        
+                        # No delay between messages
+                        if Config.MESSAGE_DELAY > 0:
+                            await asyncio.sleep(Config.MESSAGE_DELAY)
+                        
+                    except discord.HTTPException as e:
+                        if e.status == 429:  # Rate limited
+                            logger.warning(f"Rate limited on message {i+1} in {channel.name}, waiting...")
+                            retry_after = getattr(e, 'retry_after', Config.RATE_LIMIT_DELAY)
+                            await asyncio.sleep(retry_after)
+                            
+                            # Try to send the message again
+                            try:
+                                await handle_rate_limit(channel.send, message)
+                                channel_successful_sends += 1
+                                total_successful_sends += 1
+                            except Exception as retry_error:
+                                logger.error(f"Failed to send message {i+1} in {channel.name} even after rate limit wait: {retry_error}")
+                        else:
+                            logger.error(f"HTTP error sending message {i+1} in {channel.name}: {e}")
+                            
+                    except discord.Forbidden:
+                        logger.error(f"Bot lacks permission to send messages in {channel.name}")
+                        break
+                        
+                    except Exception as e:
+                        logger.error(f"Unexpected error sending message {i+1} in {channel.name}: {e}")
+                
+                logger.info(f"Completed spam in {channel.name}: {channel_successful_sends}/{spam_count} messages sent")
+                
+            except Exception as e:
+                logger.error(f"Error processing channel {channel.name}: {e}")
+                continue
+        
+        # Send completion message to the original channel
+        try:
+            completion_msg = f"✅ **PING-EC COMPLETE** ✅\nSent {total_successful_sends} total @everyone pings across {len(text_channels)} channels!"
+            await handle_rate_limit(interaction.channel.send, completion_msg)
+        except Exception as e:
+            logger.error(f"Failed to send completion message: {e}")
+            
+    except discord.NotFound:
+        logger.error("Interaction or guild not found")
+    except discord.Forbidden:
+        logger.error("Bot lacks necessary permissions")
+        try:
+            await interaction.followup.send("❌ I don't have the necessary permissions!", ephemeral=True)
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Unexpected error in ping-ec command: {e}")
+        try:
+            await interaction.followup.send("❌ An unexpected error occurred!", ephemeral=True)
+        except:
+            pass
+
 @bot.event
 async def on_app_command_error(interaction: discord.Interaction, error: Exception):
     """Handle slash command errors"""
