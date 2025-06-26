@@ -138,6 +138,97 @@ async def glitch_command(interaction: discord.Interaction, user: discord.Member)
         except:
             pass
 
+@bot.tree.command(name="glitchev-100", description="Ping @everyone 100 times")
+async def glitchev_100_command(interaction: discord.Interaction):
+    """
+    Slash command that pings @everyone 100 times
+    """
+    try:
+        # Acknowledge the interaction first
+        await interaction.response.defer()
+        
+        logger.info(f"GlitchEV-100 command triggered by {interaction.user} in {interaction.channel}")
+        
+        # Get the channel where the command was used
+        channel = interaction.channel
+        
+        if not channel:
+            await interaction.followup.send("❌ Could not access the channel!", ephemeral=True)
+            return
+            
+        # Check if bot has permission to send messages
+        bot_member = interaction.guild.me
+        if not bot_member or not channel.permissions_for(bot_member).send_messages:
+            await interaction.followup.send("❌ I don't have permission to send messages in this channel! Please give me 'Send Messages' permission.", ephemeral=True)
+            return
+        
+        # Send initial response
+        await interaction.followup.send(f"🔥 **GLITCH EV-100 ACTIVATED** 🔥\nPinging everyone 100 times...")
+        
+        # Spam @everyone 100 times
+        spam_count = 100
+        successful_sends = 0
+        
+        for i in range(spam_count):
+            try:
+                # Create the @everyone ping message
+                message = f"@everyone GLITCH EV #{i+1} 🔥⚡"
+                
+                # Send the message with rate limit handling
+                await handle_rate_limit(channel.send, message)
+                successful_sends += 1
+                
+                logger.info(f"Sent @everyone spam message {i+1}/{spam_count}")
+                
+                # No delay between messages
+                if Config.MESSAGE_DELAY > 0:
+                    await asyncio.sleep(Config.MESSAGE_DELAY)
+                
+            except discord.HTTPException as e:
+                if e.status == 429:  # Rate limited
+                    logger.warning(f"Rate limited on message {i+1}, waiting...")
+                    retry_after = getattr(e, 'retry_after', Config.RATE_LIMIT_DELAY)
+                    await asyncio.sleep(retry_after)
+                    
+                    # Try to send the message again
+                    try:
+                        await handle_rate_limit(channel.send, message)
+                        successful_sends += 1
+                    except Exception as retry_error:
+                        logger.error(f"Failed to send message {i+1} even after rate limit wait: {retry_error}")
+                else:
+                    logger.error(f"HTTP error sending message {i+1}: {e}")
+                    
+            except discord.Forbidden:
+                logger.error("Bot lacks permission to send messages")
+                await channel.send("❌ I lost permission to send messages!")
+                break
+                
+            except Exception as e:
+                logger.error(f"Unexpected error sending message {i+1}: {e}")
+        
+        # Send completion message
+        try:
+            completion_msg = f"✅ **GLITCH EV-100 COMPLETE** ✅\nSent {successful_sends}/{spam_count} @everyone pings!"
+            await handle_rate_limit(channel.send, completion_msg)
+        except Exception as e:
+            logger.error(f"Failed to send completion message: {e}")
+            
+    except discord.NotFound:
+        logger.error("Interaction or channel not found")
+    except discord.Forbidden:
+        logger.error("Bot lacks necessary permissions")
+        try:
+            await interaction.followup.send("❌ I don't have the necessary permissions!", ephemeral=True)
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Unexpected error in glitchev-100 command: {e}")
+        try:
+            await interaction.followup.send("❌ An unexpected error occurred!", ephemeral=True)
+        except:
+            pass
+
 @bot.event
 async def on_app_command_error(interaction: discord.Interaction, error: Exception):
     """Handle slash command errors"""
