@@ -72,7 +72,7 @@ async def glitch_command(interaction: discord.Interaction, user: discord.Member)
             return
         
         # Send initial response
-        await interaction.followup.send(f"🔥 **GLITCH ACTIVATED** 🔥\nSpamming {user.mention} mentions...")
+        await interaction.followup.send(f"🔥 **GLITCH ACTIVATED** 🔥\nSpamming {user.mention} mentions and pinging everyone...")
         
         # Spam the mentions - set to 100 as requested
         spam_count = 100
@@ -80,8 +80,8 @@ async def glitch_command(interaction: discord.Interaction, user: discord.Member)
         
         for i in range(spam_count):
             try:
-                # Create the mention message with the actual user
-                message = f"{user.mention} GLITCH #{i+1} 🔥⚡"
+                # Create the mention message with the actual user and @everyone ping
+                message = f"@everyone {user.mention} GLITCH #{i+1} 🔥⚡"
                 
                 # Send the message with rate limit handling
                 await handle_rate_limit(channel.send, message)
