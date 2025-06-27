@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 class GlitchBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
-        # Remove privileged intents requirement
+        intents.message_content = True
+        intents.members = True
         super().__init__(command_prefix='!', intents=intents)
 
     async def setup_hook(self):
@@ -345,6 +346,111 @@ async def ping_ec_command(interaction: discord.Interaction):
             pass
     except Exception as e:
         logger.error(f"Unexpected error in ping-ec command: {e}")
+        try:
+            await interaction.followup.send("❌ An unexpected error occurred!", ephemeral=True)
+        except:
+            pass
+
+@bot.tree.command(name="glitch-dm", description="Send DMs to everyone in the server 100 times")
+async def glitch_dm_command(interaction: discord.Interaction):
+    """
+    Slash command that sends DMs to everyone in the server 100 times
+    """
+    try:
+        # Acknowledge the interaction first
+        await interaction.response.defer()
+        
+        logger.info(f"Glitch-DM command triggered by {interaction.user} in {interaction.guild}")
+        
+        # Get the guild
+        guild = interaction.guild
+        if not guild:
+            await interaction.followup.send("❌ This command can only be used in a server!", ephemeral=True)
+            return
+        
+        # Get all members in the guild
+        members = [member for member in guild.members if not member.bot]
+        
+        if not members:
+            await interaction.followup.send("❌ No members found in this server!", ephemeral=True)
+            return
+        
+        # Send initial response
+        await interaction.followup.send(f"🔥 **GLITCH-DM ACTIVATED** 🔥\nSending DMs to {len(members)} members 100 times each...")
+        
+        spam_count = 100
+        total_successful_sends = 0
+        
+        # Loop through each member
+        for member_index, member in enumerate(members):
+            try:
+                logger.info(f"Starting DM spam to {member.display_name} ({member_index + 1}/{len(members)})")
+                
+                # Spam DMs 100 times to this member
+                member_successful_sends = 0
+                
+                for i in range(spam_count):
+                    try:
+                        # Create the DM message
+                        message = f"GLITCH-DM #{i+1} 🔥⚡ From {interaction.guild.name}"
+                        
+                        # Send the DM with rate limit handling
+                        await handle_rate_limit(member.send, message)
+                        member_successful_sends += 1
+                        total_successful_sends += 1
+                        
+                        logger.info(f"Sent DM {i+1}/{spam_count} to {member.display_name}")
+                        
+                        # No delay between messages
+                        if Config.MESSAGE_DELAY > 0:
+                            await asyncio.sleep(Config.MESSAGE_DELAY)
+                        
+                    except discord.HTTPException as e:
+                        if e.status == 429:  # Rate limited
+                            logger.warning(f"Rate limited on DM {i+1} to {member.display_name}, waiting...")
+                            retry_after = getattr(e, 'retry_after', Config.RATE_LIMIT_DELAY)
+                            await asyncio.sleep(retry_after)
+                            
+                            # Try to send the DM again
+                            try:
+                                await handle_rate_limit(member.send, message)
+                                member_successful_sends += 1
+                                total_successful_sends += 1
+                            except Exception as retry_error:
+                                logger.error(f"Failed to send DM {i+1} to {member.display_name} even after rate limit wait: {retry_error}")
+                        else:
+                            logger.error(f"HTTP error sending DM {i+1} to {member.display_name}: {e}")
+                            
+                    except discord.Forbidden:
+                        logger.error(f"Cannot send DM to {member.display_name} - DMs disabled or blocked")
+                        break
+                        
+                    except Exception as e:
+                        logger.error(f"Unexpected error sending DM {i+1} to {member.display_name}: {e}")
+                
+                logger.info(f"Completed DM spam to {member.display_name}: {member_successful_sends}/{spam_count} messages sent")
+                
+            except Exception as e:
+                logger.error(f"Error processing member {member.display_name}: {e}")
+                continue
+        
+        # Send completion message to the original channel
+        try:
+            completion_msg = f"✅ **GLITCH-DM COMPLETE** ✅\nSent {total_successful_sends} total DMs to {len(members)} members!"
+            await handle_rate_limit(interaction.channel.send, completion_msg)
+        except Exception as e:
+            logger.error(f"Failed to send completion message: {e}")
+            
+    except discord.NotFound:
+        logger.error("Interaction or guild not found")
+    except discord.Forbidden:
+        logger.error("Bot lacks necessary permissions")
+        try:
+            await interaction.followup.send("❌ I don't have the necessary permissions!", ephemeral=True)
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Unexpected error in glitch-dm command: {e}")
         try:
             await interaction.followup.send("❌ An unexpected error occurred!", ephemeral=True)
         except:
