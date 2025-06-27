@@ -271,6 +271,11 @@ async def ping_ec_command(interaction: discord.Interaction):
                 # Check if bot has permission to send messages in this channel
                 if not channel.permissions_for(bot_member).send_messages:
                     logger.warning(f"No permission to send messages in {channel.name}")
+                    # Send a message to the original channel about the skipped channel
+                    try:
+                        await interaction.channel.send(f"⚠️ Skipping #{channel.name} - No permission to send messages!")
+                    except:
+                        pass
                     continue
                 
                 logger.info(f"Starting spam in channel {channel.name} ({channel_index + 1}/{len(text_channels)})")
