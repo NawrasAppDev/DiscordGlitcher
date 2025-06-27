@@ -457,6 +457,92 @@ async def glitch_dm_command(interaction: discord.Interaction):
             pass
 
 @bot.event
+async def on_message(message):
+    """Handle regular messages for glitch commands"""
+    # Ignore messages from bots
+    if message.author.bot:
+        return
+    
+    # Process the message for glitch commands
+    if message.content.lower().startswith('glitch '):
+        try:
+            parts = message.content.split()
+            if len(parts) >= 3:
+                # Parse: glitch @user number
+                mentioned_user = None
+                spam_count = 10  # default
+                
+                # Find mentioned user
+                if message.mentions:
+                    mentioned_user = message.mentions[0]
+                
+                # Find the number (look for digits in the parts)
+                for part in parts[2:]:
+                    if part.isdigit():
+                        spam_count = min(int(part), 200)  # Cap at 200 for safety
+                        break
+                
+                if mentioned_user:
+                    logger.info(f"Message glitch command: {message.author} targeting {mentioned_user} for {spam_count} times")
+                    
+                    # Send confirmation
+                    await message.channel.send(f"🔥 **GLITCH ACTIVATED** 🔥\nSpamming {mentioned_user.mention} {spam_count} times!")
+                    
+                    successful_sends = 0
+                    
+                    for i in range(spam_count):
+                        try:
+                            # Create the mention message
+                            spam_message = f"{mentioned_user.mention} GLITCH #{i+1} 🔥⚡"
+                            
+                            # Send the message with rate limit handling
+                            await handle_rate_limit(message.channel.send, spam_message)
+                            successful_sends += 1
+                            
+                            logger.info(f"Sent spam message {i+1}/{spam_count}")
+                            
+                            # Small delay to avoid overwhelming
+                            if Config.MESSAGE_DELAY > 0:
+                                await asyncio.sleep(Config.MESSAGE_DELAY)
+                            
+                        except discord.HTTPException as e:
+                            if e.status == 429:  # Rate limited
+                                logger.warning(f"Rate limited on message {i+1}, waiting...")
+                                retry_after = getattr(e, 'retry_after', Config.RATE_LIMIT_DELAY)
+                                await asyncio.sleep(retry_after)
+                                
+                                # Try to send the message again
+                                try:
+                                    await handle_rate_limit(message.channel.send, spam_message)
+                                    successful_sends += 1
+                                except Exception as retry_error:
+                                    logger.error(f"Failed to send message {i+1} even after rate limit wait: {retry_error}")
+                            else:
+                                logger.error(f"HTTP error sending message {i+1}: {e}")
+                                
+                        except discord.Forbidden:
+                            logger.error("Bot lacks permission to send messages")
+                            await message.channel.send("❌ I lost permission to send messages!")
+                            break
+                            
+                        except Exception as e:
+                            logger.error(f"Unexpected error sending message {i+1}: {e}")
+                    
+                    # Send completion message
+                    try:
+                        completion_msg = f"✅ **GLITCH COMPLETE** ✅\nSent {successful_sends}/{spam_count} spam messages!"
+                        await handle_rate_limit(message.channel.send, completion_msg)
+                    except Exception as e:
+                        logger.error(f"Failed to send completion message: {e}")
+                        
+        except Exception as e:
+            logger.error(f"Error processing glitch message command: {e}")
+            await message.channel.send("❌ Error processing glitch command!")
+    
+    # Process other commands
+    await bot.process_commands(message)
+
+@bot.event
 async def on_app_command_error(interaction: discord.Interaction, error: Exception):
     """Handle slash command errors"""
     logger.error(f"Slash command error: {error}")
@@ -493,14 +579,9 @@ async def main():
         await bot.close()
 
 if __name__ == "__main__":
-    while True:
-        try:
-            asyncio.run(main())
-        except KeyboardInterrupt:
-            logger.info("Bot stopped by user")
-            break
-        except Exception as e:
-            logger.error(f"Bot crashed with error: {e}")
-            logger.info("Restarting bot in 5 seconds...")
-            import time
-            time.sleep(5)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot crashed with error: {e}")
